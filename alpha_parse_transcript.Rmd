@@ -1,0 +1,97 @@
+---
+title: "parse_transcript"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, rvest, zoo)
+```
+
+# test
+```{r}
+link <- read_html("001schuz/s001002.htm")
+
+ah <- link %>%
+  html_nodes("p") %>%
+  as.character() %>%
+  as_tibble() %>%
+  rename(xml = value)
+
+ah_text <- link %>%
+  html_nodes("p") %>%
+  html_text() %>%
+  as_tibble()
+
+ah_doc <- link %>%
+  html_node("title") %>%
+  html_text() %>%
+  as_tibble() %>%
+  rename(doc = value)
+
+ah2 <- cbind.data.frame(ah, ah_text, ah_doc) %>%
+  rename(text = value) %>%
+  # extracting speaker
+  mutate(speaker = str_extract(xml, "<a.*?</a>"),
+         speaker = str_extract(speaker, ">.*?<"),
+         speaker = str_remove_all(speaker, "<|>"),
+         speaker_index = if_else(is.na(speaker), 0, 1)) %>%
+  # extracting meeting point
+  mutate(bod = ifelse(str_detect(xml, 'align="center'), text, NA),
+         bod = ifelse(bod == " ", NA, bod),
+         bod_index = if_else(is.na(bod), 0, 1)) %>%
+  # extractking scenic notes
+  mutate(com = str_extract_all(text, "\\((.*?)\\)"),
+         com = paste0(com),
+         com = ifelse(com == "character(0)", NA, com)) %>%
+  # extract meeting time
+  mutate(hhmm = ifelse(str_detect(com, "hodin"), 
+                       str_extract(com, "\\d\\d\\.\\d\\d"), NA))
+
+# if speaker_index is 0, don't run these lines
+list_of_speakers <- as_tibble(table(ah2$speaker))$Var1
+list_of_speakers <- paste0(list_of_speakers, ":")
+
+ah3 <- ah2 %>%
+  # clean the astrisks 
+  mutate(text = str_remove(text, "\\*\\*\\*")) %>%
+  # erasing empty rows (whitespace or nothing)
+  mutate(text = trimws(text, which = "both"),
+         text = ifelse(nchar(text) <= 1, NA, text)) %>%
+  filter(!is.na(text)) %>%
+  # erasing comments from text
+  mutate(text = str_remove_all(text, "\\((.*?)\\)")) %>%
+  # easting speaker name from text
+  mutate(text = ifelse(speaker_index == 1, 
+                         str_remove(text, paste(list_of_speakers, collapse = "|")), 
+                         text))
+
+ah4 <- ah3 %>%
+  # filling NAs for speaker
+  mutate(speaker = na.locf(speaker, na.rm = F)) %>%
+  # filling NAs for bod
+  mutate(bod = na.locf(bod, na.rm = F)) %>%
+  # correct variables
+  mutate(xml = as.character(xml),
+         text = as.character(text),
+         doc = as.character(doc),
+         speaker = as.character(speaker),
+         speaker_index = as.numeric(speaker_index),
+         bod = as.character(bod),
+         bod_index = as.character(bod_index),
+         com = as.character(com),
+         hhmm = as.character(hhmm))
+
+View(ah4)
+```
+
+# joining
+```{r}
+a <- full_join(s1, s2)
+
+# works, just needs more na.lofc
+# when part end, no information about speaker
+```
+
