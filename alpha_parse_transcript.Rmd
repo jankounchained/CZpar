@@ -12,7 +12,7 @@ p_load(tidyverse, rvest, zoo)
 
 # test
 ```{r}
-link <- read_html("001schuz/s001002.htm")
+link <- read_html("001schuz/s001001.htm")
 
 ah <- link %>%
   html_nodes("p") %>%
