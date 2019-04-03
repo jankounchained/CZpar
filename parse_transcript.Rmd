@@ -106,13 +106,23 @@ s2017 <- list.files(path = "data/2017ps/", pattern = "s", full.names = T)
 
 # run parsing
 ```{r}
-psp2017 <- map_df(s2017, parse_stenoskript)
-write_csv(psp2017, "data/csv/psp2017.csv")
+psp2017r <- map_df(s2017, parse_stenoskript)
+write_csv(psp2017r, "data/csv/psp2017_rawish.csv")
 ```
 
 
 # Postprocessing of metadata (na.locf)
 ```{r}
+psp2017 <- psp2017r %>%
+  # filling NAs for speaker
+  mutate(speaker = na.locf(speaker, na.rm = F)) %>%
+  # filling NAs for bod
+  mutate(bod = na.locf(bod, na.rm = F)) %>%
+  # filter bod rows
+  filter(bod_index == 0) %>%
+  # get rid of xml
+  select(-xml)
 
+write_csv(psp2017, "data/csv/psp2017.csv")
 ```
 
