@@ -100,13 +100,14 @@ parse_stenoskript <- function(html_doc) {
 
 # list of objects
 ```{r}
-list.files(path = "001schuz/", pattern = "s")
+s2017 <- list.files(path = "data/2017ps/", pattern = "s", full.names = T)
 ```
 
 
 # run parsing
 ```{r}
-
+psp2017 <- map_df(s2017, parse_stenoskript)
+write_csv(psp2017, "data/csv/psp2017.csv")
 ```
 
 

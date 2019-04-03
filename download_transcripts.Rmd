@@ -72,7 +72,7 @@ all_zip_links <- map_df(zip_links$value, get_link_zf)
 
 # loop download
 ```{r}
-for (link in zip2010$value) {
+for (link in all_zip_links$value) {
   
   timeout = sample(5, 1) + exp(rnorm(1))
   
@@ -85,5 +85,22 @@ for (link in zip2010$value) {
   Sys.sleep(timeout)
   
 }
+```
+
+
+
+# unzip and sort
+```{r}
+#2010
+f2010 <- list.files("data/zipfiles/", pattern = "2010.*?\\.zip", full.names = T)
+lapply(f2010, unzip, exdir = "C:\\Users\\jan\\Documents\\_git\\CZpar\\data\\2010ps")
+
+#2013
+f2013 <- list.files("data/zipfiles/", pattern = "2013.*?\\.zip", full.names = T)
+lapply(f2013, unzip, exdir = "C:\\Users\\jan\\Documents\\_git\\CZpar\\data\\2013ps")
+
+#2017
+f2017 <- list.files("data/zipfiles/", pattern = "2017.*?\\.zip", full.names = T)
+lapply(f2017, unzip, exdir = "C:\\Users\\jan\\Documents\\_git\\CZpar\\data\\2017ps")
 ```
 
