@@ -52,7 +52,7 @@ parse_stenoskript <- function(html_doc) {
            com = ifelse(com == "character(0)", NA, com)) %>%
     # extract meeting time
     mutate(hhmm = ifelse(str_detect(com, "hodin"), 
-                         str_extract(com, "\\d\\d\\.\\d\\d"), NA))
+                         str_extract(com, "\\d\\d\\.\\d\\d|\\d.\\d\\d"), NA))
   
   # EXTRACT LIST OF SPEAKERS
   # possible tweak: if speaker_index is 0, don't run these lines
