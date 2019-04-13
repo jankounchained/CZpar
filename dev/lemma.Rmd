@@ -1,0 +1,35 @@
+---
+title: "lemma"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, udpipe, groupdata2)
+
+psp_tidy <- read_csv("data/csv/psp_tidy.csv")
+
+# psp_tidy <- read_csv("data/csv/psp_tidy.csv") %>%
+#   mutate(text_c = ifelse(is.na(text_c), 0, text_c))
+```
+
+```{r}
+lemma = psp_tidy %>%
+  arrange(doc) %>%
+  groupdata2::group(100)
+
+lemma %>%
+    split(.$.groups) %>%
+    walk(~(write_lines(.$text_c, str_c("data/to_udpipe/", unique(.$.groups)))))
+```
+
+
+```{r}
+ud_model <- udpipe_download_model(language = "english")
+ud_model <- udpipe_load_model(ud_model$file_model)
+x <- udpipe_annotate(ud_model, x = comments$feedback, doc_id = comments$id)
+x <- as.data.frame(x)
+```
+

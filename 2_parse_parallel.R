@@ -7,6 +7,7 @@ library(furrr)
 library(rvest)
 library(zoo)
 library(tictoc)
+library(naniar)
 
 file_list <- list.files(path = "data/2017ps/", pattern = "s", full.names = T)
 
@@ -130,6 +131,8 @@ pspr <- pspr %>%
   filter(bod_index == 0) %>%
   # get rid of xml
   select(-xml) %>%
+  # handling nas
+  replace_with_na(replace = list(text = "")) %>%
   mutate(text = ifelse(is.na(text) & !is.na(hhmm) |
                          is.na(text) & !is.na(com), 0, text))
 
@@ -137,7 +140,8 @@ psp_tidy <- pspr %>%
   mutate(text_c = str_replace_all(text, "§", "paragraf"),
          text_c = str_remove_all(text_c, "[:punct:]"),
          text_c = tolower(text_c),
-         text_c = trimws(text_c))
+         text_c = trimws(text_c)) %>%
+  rownames_to_column() 
 
 
 ###
