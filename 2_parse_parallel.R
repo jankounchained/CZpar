@@ -5,6 +5,8 @@
 library(tidyverse)
 library(furrr)
 library(rvest)
+library(zoo)
+library(tictoc)
 
 file_list <- list.files(path = "data/2017ps/", pattern = "s", full.names = T)
 
@@ -56,7 +58,7 @@ parse_stenoskript <- function(html_doc) {
   
   # EXTRACT LIST OF SPEAKERS
   # possible tweak: if speaker_index is 0, don't run these lines
-  list_of_speakers <- as_tibble(table(prep1$speaker))$Var1
+  list_of_speakers <- enframe(table(prep1$speaker))$name
   list_of_speakers <- paste0(list_of_speakers, ":")
   
   
@@ -110,8 +112,9 @@ plan(multiprocess)
 # RUN
 ###
 
-pspr <- future_map(file_list, parse_stenoskript)
-
+tictoc::tic()
+pspr <- future_map_dfr(file_list, parse_stenoskript, .progress = TRUE)
+tictoc::toc()
 
 
 ###
@@ -127,12 +130,12 @@ pspr <- pspr %>%
   filter(bod_index == 0) %>%
   # get rid of xml
   select(-xml) %>%
-  filter(!is.na(speaker)) %>%
   mutate(text = ifelse(is.na(text) & !is.na(hhmm) |
                          is.na(text) & !is.na(com), 0, text))
 
 psp_tidy <- pspr %>%
-  mutate(text_c = str_remove_all(text, "[:punct:]"),
+  mutate(text_c = str_replace_all(text, "§", "paragraf"),
+         text_c = str_remove_all(text_c, "[:punct:]"),
          text_c = tolower(text_c),
          text_c = trimws(text_c))
 
