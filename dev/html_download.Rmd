@@ -1,0 +1,132 @@
+---
+title: "html_download"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, rvest)
+```
+
+# get links: home
+```{r}
+# read links from Parliamentary Digital Library
+home <- read_html("http://www.psp.cz/eknih/index.htm") %>%
+  html_nodes("a") %>%
+  html_attrs() %>%
+  as.character() %>%
+  enframe()
+
+
+# filter links containing number + "ps" (chamber of deputies seasons)
+ps_index <- home %>%
+  filter(str_detect(value, "\\dps")) %>%
+  mutate(value = paste0("http://www.psp.cz", value))
+```
+
+
+# 2013ps: download index.htm (e.g. 1-1.htm)
+```{r index 2013ps}
+res_link_2013 <- ps_index %>%
+  filter(str_detect(value, "2013")) %>% #change
+  mutate(value = str_remove(value, "/index.htm"),
+         value = paste0(value, "/stenprot/index.htm"))
+
+
+get_index_2013 <- function(url) {
+  
+  link <- read_html(url)
+  
+  url_char <- str_remove(url, "/index.htm")
+  
+  on_page <- link %>%
+    html_nodes("a") %>%
+    html_attrs() %>%
+    as.character() %>%
+    enframe() %>%
+    filter(str_detect(value, "schuz/")) %>%
+    filter(str_detect(value, "059|060|061")) %>%
+    mutate(value = paste0(url_char, "/", value))
+  
+  return(on_page)
+  
+}
+
+# index pages 2013ps
+index_links_2013 <- get_index_2013(res_link_2013$value[1])
+
+
+# download index pages 2013ps
+for (link in index_links_2013$value) {
+  
+  timeout = sample(5, 1) + exp(rnorm(1))
+  
+  download_html(url = link, 
+                file = paste0("data/2013ps/", basename(link)))
+  
+  Sys.sleep(timeout)
+  
+}
+```
+
+# 2013ps: get transcript links from indexes
+```{r}
+get_script_link_2013ps <- function(url) {
+  
+  link <- read_html(url)
+  
+  script_links <- link %>%
+    html_nodes("a") %>%
+    html_attrs() %>%
+    as.character() %>%
+    enframe() %>%
+    # detect transcript links
+    filter(str_detect(value, "s\\d")) %>%
+    # get rid of duplicates
+    mutate(doc_index = as.numeric(str_extract(value, "\\d\\d\\d\\d\\d\\d"))) %>%
+    filter(!duplicated(doc_index)) %>%
+    # get rid of browser orientation
+    mutate(value = str_remove(value, "#.*")) %>%
+    # clean
+    select(-doc_index, -name)
+  
+  
+}
+
+# get links
+residual2013ps <- list.files("data/2013ps/", pattern = "59-|60-|61-", full.names = T)
+script_link_2013ps <- map_df(residual2013ps, get_script_link_2013ps)
+
+
+# make links usable
+script_link_2013ps_html <- script_link_2013ps %>%
+  mutate(value = case_when(
+    str_detect(value, "059") ~
+      paste0("http://www.psp.cz/eknih/2013ps/stenprot/059schuz/", value),
+    str_detect(value, "060") ~
+      paste0("http://www.psp.cz/eknih/2013ps/stenprot/060schuz/", value),
+    str_detect(value, "061") ~
+      paste0("http://www.psp.cz/eknih/2013ps/stenprot/061schuz/", value)
+    ))
+
+```
+
+
+# download html source code from usable links
+```{r}
+for (link in script_link_2013ps_html$value) {
+  
+  timeout = sample(5, 1) + exp(rnorm(1))
+  
+  download_html(url = link, 
+                file = paste0("data/2013ps/", basename(link)))
+  
+  Sys.sleep(timeout)
+  
+}
+```
+
+
+Than forward to parse transcript function

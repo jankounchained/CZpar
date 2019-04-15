@@ -30,13 +30,6 @@ old_psp <- "2006|2002|1998|1996|1993"
   
 ```
 
-# get links: html (old psp)
-```{r}
-# PSP1993 til PSP 2006 have only html docs
-html_links <- ps_index %>%
-  filter(str_detect(value, old_psp))
-```
-
 # get links: zip
 ```{r}
 # PSP2010 and later have zipped transcripts
