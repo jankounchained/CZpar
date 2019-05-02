@@ -1,0 +1,104 @@
+---
+title: "lemma"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, udpipe, groupdata2)
+
+psp_tidy <- read_csv("data/csv/psp_tidy.csv")
+
+# psp_tidy <- read_csv("data/csv/psp_tidy.csv") %>%
+#   mutate(text_c = ifelse(is.na(text_c), 0, text_c))
+```
+
+```{r cut into groups}
+lemma = psp_tidy %>%
+  arrange(doc) %>%
+  groupdata2::group(100)
+
+lemma %>%
+    split(.$.groups) %>%
+    walk(~(write_lines(.$text_c, str_c("data/to_udpipe/", unique(.$.groups)))))
+
+ltest = lemma %>%
+  filter(.groups == 1)
+```
+
+```{r cut csv}
+lemma = psp_tidy %>%
+  arrange(doc) %>%
+  groupdata2::group(100)
+
+lemma %>%
+  select(rowname, text_c, .groups) %>%
+  split(.$.groups) %>%
+  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), ".csv"))))
+```
+
+```{r run udpipe on csv}
+a <- read_csv("data/to_udpipe/1.csv")
+
+ud_model <- udpipe_load_model("czech-pdt-ud-2.3-181115.udpipe")
+x <- udpipe_annotate(ud_model, x = a$text_c, doc_id = a$rowname)
+x <- as_tibble(x)
+
+cat(as_conllu(x), file = file(str_c("data/from_udpipe/", "1"), 
+                              encoding = "UTF-8"))
+
+
+```
+
+
+
+
+```{r run udpipe}
+#ud_model <- udpipe_download_model(language = "czech")
+ud_model <- udpipe_load_model("czech-pdt-ud-2.3-181115.udpipe")
+x <- udpipe_annotate(ud_model, x = ltest$text_c, doc_id = ltest$rowname)
+x2 <- as.data.frame(x)
+
+cat(as_conllu(x2), file = file("data/from_udpipe/test.conllu", encoding = "UTF-8"))
+```
+
+
+```{r compile back into sentences}
+# NEST
+comp <- x2 %>%
+  mutate(doc_id = as.numeric(doc_id)) %>%
+  filter(!is.na(lemma)) %>%
+  group_by(doc_id) %>%
+  summarise(text = str_c(lemma, collapse = " "))
+         
+# FROM MALTE
+comp = ltest %>%
+  rename(doc_id = doc) %>%
+  select(.groups, doc_id) %>%
+  #filter(.groups %in% 1:8) %>%
+  #partition(.groups) %>%
+  group_by(.groups) %>%
+    do({#print(unique(.$.groups))
+        mutate(., lemma =
+                      str_c("data/from_udpipe/", unique(.$.groups)) %>%
+                      read_file() %>%
+                      str_split("# sent_id = \\d+\n", simplify = TRUE) %>%
+                      `[`(-1) %>%
+                      map(read_tsv, skip = 1,
+                          col_names = c("lemma", "type"),
+                          col_types = "__cc______") %>%
+                      map(filter, type != "PUNCT") ) %>%
+            unnest(lemma) %>%
+            select(doc_id, lemma) %>%
+            mutate(lemma = str_extract(lemma, "\\w+")) %>% 
+            return()
+    }) %>%
+    collect() %>%
+    ungroup() %>%
+    select(-.groups) %>%
+    arrange(as.numeric(doc_id))
+
+```
+
