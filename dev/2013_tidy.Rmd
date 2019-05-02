@@ -1,0 +1,47 @@
+---
+title: "2013_tidy"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, tidytext)
+```
+
+# data in
+```{r}
+psp2013 <- read_csv("data/csv/psp2013.csv")
+
+colSums(is.na(psp2013))
+
+na_text <- psp2013 %>%
+  filter(is.na(text)) %>%
+  filter(is.na(hhmm))
+
+na_bod <- psp2013 %>%
+  filter(is.na(bod))
+
+na_speaker <- psp2013 %>%
+  filter(is.na(speaker))
+
+hhmm_only <- psp2013 %>%
+  filter(!is.na(hhmm))
+```
+
+# action
+```{r}
+psp2013_2 <- psp2013 %>%
+  filter(!is.na(speaker)) %>%
+  mutate(text = ifelse(is.na(text) & !is.na(hhmm) |
+                          is.na(text) & !is.na(com), 0, text))
+
+psp2013_tidy <- psp2013_2 %>%
+  mutate(text_c = str_remove_all(text, "[:punct:]"),
+         text_c = tolower(text_c),
+         text_c = trimws(text_c))
+
+write_csv(psp2013_tidy, "psp2013_tidy.csv")
+```
+

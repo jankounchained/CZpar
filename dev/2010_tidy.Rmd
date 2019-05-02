@@ -1,0 +1,49 @@
+---
+title: "2010_tidy"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, tidytext)
+```
+
+# data in
+```{r}
+psp2010 <- read_csv("data/csv/psp2010.csv")
+
+colSums(is.na(psp2010))
+
+na_text <- psp2010 %>%
+  filter(is.na(text)) %>%
+  filter(is.na(hhmm))
+
+na_bod <- psp2010 %>%
+  filter(is.na(bod))
+
+na_speaker <- psp2010 %>%
+  filter(is.na(speaker))
+
+hhmm_only <- psp2010 %>%
+  filter(!is.na(hhmm))
+```
+
+# action
+```{r}
+psp2010_2 <- psp2010 %>%
+  filter(!is.na(speaker)) %>%
+  mutate(text = ifelse(is.na(text) & !is.na(hhmm) |
+                          is.na(text) & !is.na(com), 0, text))
+
+psp2010_tidy <- psp2010_2 %>%
+  mutate(text_c = str_remove_all(text, "[:punct:]"),
+         text_c = tolower(text_c),
+         text_c = trimws(text_c))
+
+colSums(is.na(psp2010_tidy))
+
+write_csv(psp2010_tidy, "psp2010_tidy.csv")
+```
+
