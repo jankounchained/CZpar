@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
-p_load(tidyverse, rvest)
+p_load(tidyverse, rvest, zoo)
 ```
 
 # parse_stenoskript function
@@ -20,23 +20,23 @@ parse_stenoskript <- function(html_doc) {
   raw_xml <- link %>%
     html_nodes("p") %>%
     as.character() %>%
-    as_tibble() %>%
+    enframe(name = NULL) %>%
     rename(xml = value)
   
   text <- link %>%
     html_nodes("p") %>%
     html_text() %>%
-    as_tibble()
+    enframe(name = NULL) %>%
+    rename(text = value)
   
   doc <- link %>%
     html_node("title") %>%
     html_text() %>%
-    as_tibble() %>%
+    enframe(name = NULL) %>%
     rename(doc = value)
   
   # EXTRACT INFORMATION
   prep1 <- cbind.data.frame(raw_xml, text, doc) %>%
-    rename(text = value) %>%
     # extracting speaker
     mutate(speaker = str_extract(xml, "<a.*?</a>"),
            speaker = str_extract(speaker, ">.*?<"),
@@ -56,7 +56,7 @@ parse_stenoskript <- function(html_doc) {
   
   # EXTRACT LIST OF SPEAKERS
   # possible tweak: if speaker_index is 0, don't run these lines
-  list_of_speakers <- as_tibble(table(prep1$speaker))$Var1
+  list_of_speakers <- enframe(table(prep1$speaker))$name
   list_of_speakers <- paste0(list_of_speakers, ":")
   
   
@@ -101,6 +101,8 @@ parse_stenoskript <- function(html_doc) {
 # list of objects
 ```{r}
 s2017 <- list.files(path = "data/2017ps/", pattern = "s", full.names = T)
+s2013 <- list.files(path = "data/2013ps/", pattern = "s", full.names = T)
+s2010 <- list.files(path = "data/2010ps/", pattern = "s", full.names = T)
 ```
 
 
@@ -108,6 +110,12 @@ s2017 <- list.files(path = "data/2017ps/", pattern = "s", full.names = T)
 ```{r}
 psp2017r <- map_df(s2017, parse_stenoskript)
 write_csv(psp2017r, "data/csv/psp2017_rawish.csv")
+
+psp2013r <- map_df(s2013, parse_stenoskript)
+write_csv(psp2013r, "data/csv/psp2013_rawish.csv")
+
+psp2010r <- map_df(s2010, parse_stenoskript)
+write_csv(psp2010r, "data/csv/psp2010_rawish.csv")
 ```
 
 
@@ -124,5 +132,31 @@ psp2017 <- psp2017r %>%
   select(-xml)
 
 write_csv(psp2017, "data/csv/psp2017.csv")
+
+
+psp2013 <- psp2013r %>%
+  # filling NAs for speaker
+  mutate(speaker = na.locf(speaker, na.rm = F)) %>%
+  # filling NAs for bod
+  mutate(bod = na.locf(bod, na.rm = F)) %>%
+  # filter bod rows
+  filter(bod_index == 0) %>%
+  # get rid of xml
+  select(-xml)
+
+write_csv(psp2013, "data/csv/psp2013.csv")
+
+
+psp2010 <- psp2010r %>%
+  # filling NAs for speaker
+  mutate(speaker = na.locf(speaker, na.rm = F)) %>%
+  # filling NAs for bod
+  mutate(bod = na.locf(bod, na.rm = F)) %>%
+  # filter bod rows
+  filter(bod_index == 0) %>%
+  # get rid of xml
+  select(-xml)
+
+write_csv(psp2010, "data/csv/psp2010.csv")
 ```
 
