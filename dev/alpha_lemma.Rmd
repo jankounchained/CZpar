@@ -46,7 +46,7 @@ ud_model <- udpipe_load_model("czech-pdt-ud-2.3-181115.udpipe")
 x <- udpipe_annotate(ud_model, x = a$text_c, doc_id = a$rowname)
 x <- as_tibble(x)
 
-cat(as_conllu(x), file = file(str_c("data/from_udpipe/", "1"), 
+cat(as_conllu(x), file = file(str_c("data/from_udpipe/", "1.conllu"), 
                               encoding = "UTF-8"))
 
 
