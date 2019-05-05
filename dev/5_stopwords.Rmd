@@ -1,0 +1,75 @@
+---
+title: "5_stopwords"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, tidytext)
+```
+
+
+# Merge lemma back
+```{r merge lemma 2017}
+# list and load from_udpipe
+l2017 <- list.files(path = "data/from_udpipe/", pattern = "_2017", full.names = T)
+from_2017 <- map_df(l2017, read_csv) %>%
+  rename(rowname = doc_id)
+
+# load original data
+psp2017_tidy <- read_csv("data/csv/psp_tidy.csv") %>%
+  select(-text_c)
+
+# join
+psp2017L <- full_join(psp2017_tidy, from_2017, by = "rowname")
+```
+
+```{r merge lemma 2013}
+
+```
+
+```{r merge lemma 2010}
+
+```
+
+
+
+# join all dataframes
+```{r join psps}
+
+```
+
+
+
+# stopwords
+```{r stopwords}
+# CHANGE according to joining earlier
+
+stopwords_cs <- 
+  # stopwords-iso
+  c(stopwords::stopwords("cs", source = "stopwords-iso")) %>%
+  # month names
+  c("leden", "únor", "březen", "duben", "květen", 
+    "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec") %>%
+  # addressing
+  c("kolega", "kolegyně", 
+    "poslanec", "poslankyně", 
+    "pán", "pan", "paní", 
+    "vážený",
+    "ministr", "ministrině",
+    "předseda", "předsedkyně", "předsedající",
+    "místopředseda", "místopředsedkyně") %>%
+  unlist() %>%
+  tibble(word = .)
+
+
+unn <- psp2017L %>%
+  unnest_tokens(word, text_c, token = "words") %>%
+  filter(!word %in% stopwords_cs$word) %>%
+  filter(!str_detect(word, "\\d+")) %>%
+  group_by(rowname) %>%
+  summarise(text_c = str_c(word, collapse = " "))
+```
+
