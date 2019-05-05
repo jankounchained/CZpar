@@ -42,6 +42,6 @@ psp2013_tidy <- psp2013_2 %>%
          text_c = tolower(text_c),
          text_c = trimws(text_c))
 
-write_csv(psp2013_tidy, "psp2013_tidy.csv")
+write_csv(psp2013_tidy, "data/csv/psp2013_tidy.csv")
 ```
 

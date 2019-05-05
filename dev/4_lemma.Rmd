@@ -26,14 +26,25 @@ lemma17 %>%
   walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2017.csv"))))
 ```
 
-# unfinished
 ```{r split 2013}
-psp2013 <- read_csv("data/csv/psp2013_tidy.csv")
+psp2013 <- read_csv("data/csv/psp2013_tidy.csv") %>%
+  rownames_to_column()
+
+lemma13 = psp2013 %>%
+  arrange(doc) %>%
+  groupdata2::group(40)
+
+lemma13 %>%
+  select(rowname, text_c, .groups) %>%
+  split(.$.groups) %>%
+  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2013.csv"))))
 ```
 
+# 2010: unfinished
 ```{r split 2010}
 psp2010 <- read_csv("data/csv/psp2010_tidy.csv")
 ```
+
 
 # lemma function & load udpipe model
 ```{r lemmatize}
@@ -62,10 +73,26 @@ ud_model <- udpipe_load_model("czech-pdt-ud-2.3-181115.udpipe")
 
 # parallel test
 ```{r}
-l2017 <- list.files(path = "data/to_udpipe/", pattern = "2017", full.names = F)[1:20]
+l2017 <- list.files(path = "data/to_udpipe/", pattern = "2017", full.names = F)[21:40]
 
 plan(multiprocess)
 future_lapply(l2017, lemmatize,
+              future.packages = c("tidyverse", "udpipe"))
+```
+
+```{r}
+l2013 <- list.files(path = "data/to_udpipe/", pattern = "2013", full.names = F)
+
+plan(multiprocess)
+future_lapply(l2013, lemmatize,
+              future.packages = c("tidyverse", "udpipe"))
+```
+
+```{r}
+l2010 <- list.files(path = "data/to_udpipe/", pattern = "2010", full.names = F)
+
+plan(multiprocess)
+future_lapply(l2010, lemmatize,
               future.packages = c("tidyverse", "udpipe"))
 ```
 
