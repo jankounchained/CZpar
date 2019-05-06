@@ -1,0 +1,43 @@
+---
+title: "6_lda"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse)
+```
+
+# LEMMA OUT
+```{r}
+out <- count(unn, rowname, word) %>%
+  ungroup() %>%
+  mutate(hash = as.integer(as.factor(word))) %>%
+  arrange(as.numeric(rowname, desc(n))) %>%
+  unite("freq", hash, n, sep = ":", remove = FALSE)
+
+
+out %>%
+    distinct(hash, word) %>%
+    arrange(hash) %>%
+    #tail(100) %>% View()
+    write_csv("data/vw/lemma_hash.csv")
+
+
+out2 <- out %>%
+  split(out$rowname) %>%
+  map_chr(~str_c(.$freq, collapse = " ")) %>%
+  str_c("| ", .)
+
+
+write_lines(out2, "data/vw/hashed_lda.vw")
+```
+
+
+# VW IN
+```{r}
+
+```
+
