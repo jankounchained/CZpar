@@ -27,8 +27,7 @@ lemma17 %>%
 ```
 
 ```{r split 2013}
-psp2013 <- read_csv("data/csv/psp2013_tidy.csv") %>%
-  rownames_to_column()
+psp2013 <- read_csv("data/csv/psp2013_tidy.csv")
 
 lemma13 = psp2013 %>%
   arrange(doc) %>%
@@ -42,7 +41,17 @@ lemma13 %>%
 
 # 2010: unfinished
 ```{r split 2010}
-psp2010 <- read_csv("data/csv/psp2010_tidy.csv")
+psp2010 <- read_csv("data/csv/psp2010_tidy.csv") %>%
+  filter(!is.na(text_c))
+
+lemma10 = psp2010 %>%
+  arrange(doc) %>%
+  groupdata2::group(40)
+
+lemma10 %>%
+  select(rowname, text_c, .groups) %>%
+  split(.$.groups) %>%
+  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2010.csv"))))
 ```
 
 
@@ -77,7 +86,7 @@ l2017 <- list.files(path = "data/to_udpipe/", pattern = "2017", full.names = F)[
 
 plan(multiprocess)
 future_lapply(l2017, lemmatize,
-              future.packages = c("tidyverse", "udpipe"))
+              future.packages = c("tidyverse", "udpipe", "zoo"))
 ```
 
 ```{r}
@@ -85,7 +94,7 @@ l2013 <- list.files(path = "data/to_udpipe/", pattern = "2013", full.names = F)
 
 plan(multiprocess)
 future_lapply(l2013, lemmatize,
-              future.packages = c("tidyverse", "udpipe"))
+              future.packages = c("tidyverse", "udpipe", "zoo"))
 ```
 
 ```{r}

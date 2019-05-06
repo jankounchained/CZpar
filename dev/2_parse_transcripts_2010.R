@@ -49,7 +49,7 @@ parse_stenoskript_2010 <- function(html_doc) {
   
   # EXTRACT LIST OF SPEAKERS
   # possible tweak: if speaker_index is 0, don't run these lines
-  list_of_speakers <- enframe(table(prep1$speaker))$name
+  list_of_speakers <<- enframe(table(prep1$speaker))$name
   list_of_speakers <- paste0(list_of_speakers, ":")
   
   
@@ -91,8 +91,36 @@ parse_stenoskript_2010 <- function(html_doc) {
 
 s2010 <- list.files(path = "data/2010ps/", pattern = "s", full.names = T)
 psp2010r <- map_df(s2010, parse_stenoskript_2010)
-write_csv(psp2010r, "psp2010_rawish.csv")
+write_csv(psp2010r, "data/csv/psp2010_rawish.csv")
 
+
+psp2010 <- psp2010r %>%
+  # filling NAs for speaker
+  mutate(speaker = na.locf(speaker, na.rm = F)) %>%
+  # filling NAs for bod
+  mutate(bod = na.locf(bod, na.rm = F)) %>%
+  # filter bod rows
+  filter(bod_index == 0) %>%
+  # get rid of xml
+  select(-xml) %>%
+  # handling nas
+  replace_with_na(replace = list(text = "")) %>%
+  mutate(text = ifelse(is.na(text) & !is.na(hhmm) |
+                         is.na(text) & !is.na(com), 0, text))
+
+write_csv(psp2010, "data/csv/psp2010.csv")
+
+psp2010_tidy <- psp2010 %>%
+  mutate(text_c = str_replace_all(text, "§", "paragraf"),
+         text_c = str_remove_all(text_c, "[:punct:]"),
+         text_c = tolower(text_c),
+         text_c = trimws(text_c)) %>%
+  rownames_to_column() 
+
+write_csv(psp2010_tidy, "data/csv/psp2010_tidy.csv")
+
+
+# OLD TROUBLESHOOTING
 # a_speaker <- psp2010r %>%
 #   # extract <b>speaker name</b> (psp2010 specific)
 #   mutate(speaker_b = ifelse(speaker_index == 1, str_extract(xml, "<a.*?</a>"), "nic"),
