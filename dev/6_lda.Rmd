@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
-p_load(tidyverse)
+p_load(tidyverse, entropy, multidplyr, parallel)
 ```
 
 # LEMMA OUT
@@ -34,7 +34,10 @@ out2 <- out %>%
 write_lines(out2, "data/vw/hashed_lda.vw")
 
 
-out2$doc_id %>%
+# doc_id
+out3 = unite(out, "freq", hash, n, sep = ":", remove = FALSE)
+
+out3$rowname %>%
     unique() %>%
     write_lines("models/doc_id")
 ```
