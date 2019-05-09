@@ -1,0 +1,33 @@
+---
+title: "7_analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, scales)
+```
+
+
+```{r compare metrics and speeches}
+comparison <- read_csv("data/csv/nov_tra_res_TEST.csv") %>%
+  rename(rowname = doc_id) %>%
+  left_join(psp2017L, by = "rowname")
+```
+
+
+
+```{r ploting}
+ggplot(lda_output, aes(novelty, resonance)) +
+    geom_bin2d(bins = 50) +
+    scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000),
+                         labels = trans_format("log10", 
+                                               math_format(expr = 10^.x, format = force))) +
+    geom_smooth(method = "lm", colour = "black", linetype = "dashed", alpha = 0) +
+    labs(x = "Novelty", y = "Resonance", 
+         title = "Resonance vs. Novelty")
+
+```
+
