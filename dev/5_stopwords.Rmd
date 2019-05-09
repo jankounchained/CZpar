@@ -40,13 +40,6 @@ from_2017 <- map_df(l2017, read_csv) %>%
   arrange(rowname) %>%
   filter(text_c != "0") %>%
   mutate(rowname = rowname + max(from_2013$rowname))
-
-# load original data
-# psp2017_tidy <- read_csv("data/csv/psp_tidy.csv") %>%
-#   select(-text_c)
-# 
-# # join
-# psp2017L <- full_join(psp2017_tidy, from_2017, by = "rowname")
 ```
 
 

@@ -70,9 +70,9 @@ topic = topic[,-c(1, ncol(topic))]
 <smaller subset>
 ```{r smaller subset}
 doc <- doc %>%
-  head(1000)
+  slice(5001:6000)
 
-doc_id <- doc_id[1:1000]
+doc_id <- doc_id[5001:6000]
 ```
 
 

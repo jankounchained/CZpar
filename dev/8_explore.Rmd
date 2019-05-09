@@ -11,12 +11,32 @@ p_load(tidyverse, scales)
 ```
 
 
+1: SEE HOW SPEECHES WERE RATED BY MODEL
+
 ```{r compare metrics and speeches}
+## original data
+psp2010_tidy <- read_csv("data/csv/psp2010_tidy.csv") %>%
+  select(-text_c)
+
+l2010 <- list.files(path = "data/from_udpipe/", pattern = "_2010", full.names = T)
+
+from_2010 <- map_df(l2010, read_csv) %>%
+  rename(rowname = doc_id) %>%
+  arrange(rowname) %>%
+  filter(text_c != "0")
+
+psp2010L <- full_join(psp2010_tidy, from_2010, by = "rowname")
+rm(psp2010_tidy, l2010, from_2010)
+
+
+
+## lda_output
 comparison <- read_csv("data/csv/nov_tra_res_TEST.csv") %>%
   rename(rowname = doc_id) %>%
-  left_join(psp2017L, by = "rowname")
-```
+  left_join(psp2010L, by = "rowname")
 
+
+```
 
 
 ```{r ploting}
@@ -29,5 +49,16 @@ ggplot(lda_output, aes(novelty, resonance)) +
     labs(x = "Novelty", y = "Resonance", 
          title = "Resonance vs. Novelty")
 
+```
+
+
+2: DIAGNOSE LDA TOPICS
+```{r}
+topic = read_delim("models/word_topic.model", delim = " ",
+                   col_names = F, skip = 11,
+                   col_types = cols())
+topic = topic[,-c(1, ncol(topic))]
+
+hash = read_csv("data/vw/hash_full.csv")
 ```
 
