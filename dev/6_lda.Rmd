@@ -12,6 +12,8 @@ p_load(tidyverse, entropy, multidplyr, parallel)
 
 # LEMMA OUT
 ```{r}
+unn <- read_csv("data/csv/unn.csv")
+
 out <- count(unn, rowname, word) %>%
   ungroup() %>%
   mutate(hash = as.integer(as.factor(word))) %>%
@@ -22,7 +24,7 @@ out <- count(unn, rowname, word) %>%
 out %>%
     distinct(hash, word) %>%
     arrange(hash) %>%
-    write_csv("data/vw/lemma_hash.csv")
+    write_csv("data/vw/hash_full.csv")
 
 
 out2 <- out %>%
@@ -31,7 +33,7 @@ out2 <- out %>%
   str_c("| ", .)
 
 
-write_lines(out2, "data/vw/hashed_lda.vw")
+write_lines(out2, "data/vw/psp_full_lda.vw")
 
 
 # doc_id
@@ -63,6 +65,14 @@ topic = read_delim("models/word_topic.model", delim = " ",
                    col_types = cols())
 topic = topic[,-c(1, ncol(topic))]
 
+```
+
+<smaller subset>
+```{r smaller subset}
+doc <- doc %>%
+  head(1000)
+
+doc_id <- doc_id[1:1000]
 ```
 
 
@@ -136,7 +146,7 @@ lda_output$delta_R = lda_output$z_resonance - predict(res_nov_model)
 
 
 lda_output %>%
-    write_csv("data/nov_tra_res.csv")
+    write_csv("data/csv/nov_tra_res_TEST.csv")
 
 ```
 

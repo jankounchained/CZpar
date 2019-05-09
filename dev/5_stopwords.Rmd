@@ -12,41 +12,58 @@ p_load(tidyverse, tidytext)
 
 
 # Merge lemma back
-```{r merge lemma 2017}
-# list and load from_udpipe
-l2017 <- list.files(path = "data/from_udpipe/", pattern = "_2017", full.names = T)
-from_2017 <- map_df(l2017, read_csv) %>%
-  rename(rowname = doc_id)
+```{r merge lemma 2010}
+l2010 <- list.files(path = "data/from_udpipe/", pattern = "_2010", full.names = T)
 
-# load original data
-psp2017_tidy <- read_csv("data/csv/psp_tidy.csv") %>%
-  select(-text_c)
-
-# join
-psp2017L <- full_join(psp2017_tidy, from_2017, by = "rowname")
+from_2010 <- map_df(l2010, read_csv) %>%
+  rename(rowname = doc_id) %>%
+  arrange(rowname) %>%
+  filter(text_c != "0")
 ```
 
 ```{r merge lemma 2013}
+l2013 <- list.files(path = "data/from_udpipe/", pattern = "_2013", full.names = T)
 
+from_2013 <- map_df(l2013, read_csv) %>%
+  rename(rowname = doc_id) %>%
+  arrange(rowname) %>%
+  filter(text_c != "0") %>%
+  mutate(rowname = rowname + max(from_2010$rowname))
 ```
 
-```{r merge lemma 2010}
+```{r merge lemma 2017}
+# list and load from_udpipe
+l2017 <- list.files(path = "data/from_udpipe/", pattern = "_2017", full.names = T)
 
+from_2017 <- map_df(l2017, read_csv) %>%
+  rename(rowname = doc_id) %>%
+  arrange(rowname) %>%
+  filter(text_c != "0") %>%
+  mutate(rowname = rowname + max(from_2013$rowname))
+
+# load original data
+# psp2017_tidy <- read_csv("data/csv/psp_tidy.csv") %>%
+#   select(-text_c)
+# 
+# # join
+# psp2017L <- full_join(psp2017_tidy, from_2017, by = "rowname")
 ```
 
 
 
 # join all dataframes
 ```{r join psps}
+nrow(from_2010) + nrow(from_2013) + nrow(from_2017)
 
+full_lemma <- from_2010 %>%
+  full_join(from_2013) %>%
+  full_join(from_2017)
 ```
 
 
 
 # stopwords
 ```{r stopwords}
-# CHANGE according to joining earlier
-
 stopwords_cs <- 
   # stopwords-iso
   c(stopwords::stopwords("cs", source = "stopwords-iso")) %>%
@@ -65,12 +82,14 @@ stopwords_cs <-
   tibble(word = .)
 
 
-unn <- psp2017L %>%
+unn <- full_lemma %>%
   unnest_tokens(word, text_c, token = "words") %>%
   filter(!word %in% stopwords_cs$word) %>%
   filter(!str_detect(word, "\\d+")) %>%
   select(rowname, word)
   # group_by(rowname) %>%
   # summarise(text_c = str_c(word, collapse = " "))
+
+write_csv(unn, "data/csv/unn.csv")
 ```
 
