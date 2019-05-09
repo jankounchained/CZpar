@@ -23,7 +23,6 @@ out <- count(unn, rowname, word) %>%
 
 out %>%
     distinct(hash, word) %>%
-    arrange(hash) %>%
     write_csv("data/vw/hash_full.csv")
 
 

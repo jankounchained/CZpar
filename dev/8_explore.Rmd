@@ -53,12 +53,37 @@ ggplot(lda_output, aes(novelty, resonance)) +
 
 
 2: DIAGNOSE LDA TOPICS
-```{r}
+```{r load model and hashes}
 topic = read_delim("models/word_topic.model", delim = " ",
                    col_names = F, skip = 11,
-                   col_types = cols())
-topic = topic[,-c(1, ncol(topic))]
+                   col_types = cols()) %>%
+  rename(hash = X1)
 
 hash = read_csv("data/vw/hash_full.csv")
+
+thr <- right_join(topic, hash, by = "hash")
+```
+
+```{r}
+extract_topic_words <- function(column) {
+  
+  d <- thr %>%
+    select(prob = column, word) %>%
+    arrange(desc(prob)) %>%
+    head(10) %>%
+    mutate(topic = str_extract(column, "\\d+"),
+           topic = as.numeric(topic)) %>%
+    select(topic, word, prob)
+  
+  return(d)
+  
+}
+
+col <- enframe(colnames(thr)) %>%
+  filter(str_detect(value, "\\d+"))
+
+col <- col$value
+
+topic_words <- map_df(col, extract_topic_words)
 ```
 
