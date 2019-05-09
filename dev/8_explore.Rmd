@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
-p_load(tidyverse, scales)
+p_load(tidyverse, scales, ggwordcloud)
 ```
 
 
@@ -85,5 +85,21 @@ col <- enframe(colnames(thr)) %>%
 col <- col$value
 
 topic_words <- map_df(col, extract_topic_words)
+```
+
+```{r funky topic plots}
+topic_words %>%
+  filter(topic == "37") %>%
+  ggplot(aes(label = word, size = prob / 2, color = factor(word))) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 20) +
+  theme_minimal()
+
+topic_words %>%
+  filter(topic == "64") %>%
+  ggplot(aes(label = word, size = prob / 2, color = factor(word))) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 20) +
+  theme_minimal()
 ```
 
