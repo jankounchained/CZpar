@@ -42,7 +42,8 @@ names <- poslanec %>%
   filter(id_obdobi %in% obdobi_of_interest) %>%
   left_join(osoby, by = "id_osoba") %>%
   select(prijmeni, jmeno) %>%
-  gather()
+  gather() %>%
+  mutate(value = tolower(value))
 
 ```
 
@@ -62,7 +63,7 @@ stopwords_cs <-
     "poslanec", "poslankyně", 
     "pán", "pan", "paní", 
     "vážený", "vážené", "vážená",
-    "ministr", "ministrině",
+    "ministr", "ministrině", "premiér",
     "předseda", "předsedkyně", "předsedající",
     "místopředseda", "místopředsedkyně") %>%
   unlist() %>%
