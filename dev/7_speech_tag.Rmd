@@ -1,0 +1,17 @@
+---
+title: "7_speech_tag"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse)
+```
+
+Assign parties to speakers
+```{r}
+
+```
+
