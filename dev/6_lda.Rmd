@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
-p_load(tidyverse, entropy, multidplyr, parallel)
+p_load(tidyverse, entropy, multidplyr, parallel, groupdata2)
 ```
 
 # LEMMA OUT
@@ -44,6 +44,85 @@ out3$rowname %>%
 ```
 
 
+# yearly subsets
+
+```{r}
+subset_year_new <- function(year, sub_range) {
+  
+  match <- str_c(
+    paste0(
+      as.character(year), "...., ", sub_range, "\\. ", "schůze"), 
+    collapse = "|")
+  
+  return(match)
+  
+}
+
+get_subset_start_pos <- function(year, subrange) {
+  
+  sp <- fli %>%
+    filter(str_detect(doc, subset_year_new(year, subrange))) %>%
+    select(rowname) %>%
+    head(1) %>%
+    as.character()
+  
+  return(sp)
+}
+
+fli <- read_csv("data/csv/full_lemma_in.csv")
+
+# 2010: 1-19, 20-40, 41-59
+# 2013: 1-22, 23-38, 39-58
+# 2017: 1-23, 24-29
+
+ex101 <- c(paste0(0, 0, 1:9, "schuz"), paste0(0, 10:19, "schuz"))
+ex101 <- str_c(ex101, collapse = "|")
+s_101 <- fli %>%
+  filter(str_detect(doc, ex101)) %>%
+  select(rowname) %>%
+  head(1) %>%
+  as.character()
+  
+ex102 <- str_c(paste0(0, 20:40, "schuz"), collapse = "|")
+s_102 <- fli %>%
+  filter(str_detect(doc, ex102)) %>%
+  select(rowname) %>%
+  head(1) %>%
+  as.character()
+
+ex103 <- str_c(paste0(0, 41:59, "schuz"), collapse = "|")
+s_103 <- fli %>%
+  filter(str_detect(doc, ex103)) %>%
+  select(rowname) %>%
+  head(1) %>%
+  as.character()
+
+rm(ex101, ex102, ex103)
+
+# psp2013
+s_131 <- get_subset_start_pos("2013", 1:22)
+s_132 <- get_subset_start_pos("2013", 23:38)
+s_133 <- get_subset_start_pos("2013", 38:58)
+
+
+# psp2017
+s_171 <- get_subset_start_pos("2017", 1:23)
+s_172 <- get_subset_start_pos("2017", 24:29)
+
+
+# get all variables and write_csv
+# subsets <- grep("s_.*?", names(.GlobalEnv), value = T)
+# 
+# for (i in 1:8) {
+#   
+#   write_csv(get(subsets[i]), path = paste0("data/ntr/", subsets[i], ".csv"))
+#   
+# }
+
+rm(fli)
+```
+
+
 # VW IN
 ```{r}
 doc_id = read_lines("models/doc_id")
@@ -57,95 +136,25 @@ doc = read_delim("models/doc_topic.model", delim = " ",
 n_topics = ncol(doc)
 n_docs = nrow(doc) / 10
 doc = tail(doc, n_docs)
-
-# load in topic distribution across words
-topic = read_delim("models/word_topic.model", delim = " ",
-                   col_names = F, skip = 11,
-                   col_types = cols())
-topic = topic[,-c(1, ncol(topic))]
-
-```
-
-<smaller subset>
-```{r smaller subset}
-doc <- doc %>%
-  slice(5001:6000)
-
-doc_id <- doc_id[5001:6000]
 ```
 
 
-# DIVERGENCE FUNCTIONS FROM MALTE
-```{r}
-vdiff <- function(x,n,fun) sapply(n, function(i) fun(x,i))
-vlag  <- function(x,n) vdiff(x,0:n,dplyr::lag)
-vlead <- function(x,n) vdiff(x,0:n,dplyr::lead)
+```{r get split}
+subset_var <- grep("s_.*?", names(.GlobalEnv), value = T)
 
-novelty2 <- function(w, cl, env) {
-    # produce the lags (same shape as document)
-    vlag(1:nrow(env$mat), w) %>%          
-        parApply(cl = cl, X = ., MARGIN = 1,
-                 function(idx, env) {
-                     # then for each row (document)
-                     #print(env)
-                     mean(unlist(lapply(idx[2:length(idx)], function(i) {
-                         #for each lag
-                         #check if it's na (we're at beginning / end of data)
-                         if (is.na(i)) return(NA)             
-                         ## calculate surprise from past to present
-                         KL.plugin(env$mat[i,], env$mat[idx[1],], unit = "log2")
-                         
-                     })))}, env = env)}
+subset_start <- sapply(subset_var, get, USE.NAMES = F) %>%
+  as.numeric() %>%
+  sort()
 
+# manually +1 to subset starts from psp2013 and psp2017
+doc2 <- doc %>%
+  mutate(doc_id = doc_id) %>%
+  group(n = c(1, 36744, 81355, 124089, 171200, 229401, 314649, 362983),
+        method = "l_starts",
+        starts_col = "doc_id")
 
-transience2 <- function(w, cl, env) {
-    # produce the lags (same shape as document)
-    vlag(1:nrow(env$mat), w) %>%          
-        parApply(cl = cl, X = ., MARGIN = 1,
-                 function(idx, env) {
-                     # then for each row (document)
-                     #print(env)
-                     mean(unlist(lapply(idx[2:length(idx)], function(i) {
-                         #for each lag
-                         #check if it's na (we're at beginning / end of data)
-                         if (is.na(i)) return(NA)             
-                         ## calculate surprise from present to future
-                         KL.plugin(env$mat[idx[1],], env$mat[i,], unit = "log2")
-                         
-                     })))}, env = env)}
-
-
-z <- function(d) (d - mean(d)) / sd(d)
-
-dataenv = new.env()
-dataenv$mat = doc
-
-cluster <- create_cluster(4) %>%
-    cluster_library("entropy")
-
-
-cat("[ ] Calculating novelty and transience.\n")
-
-w = 27
-
-lda_output = data_frame(doc_id) %>%
-    mutate(
-        novelty = novelty2(w, cluster, dataenv),
-        transience = transience2(w, cluster, dataenv),
-        resonance = novelty - transience) %>%
-    filter(complete.cases(.)) %>%
-    mutate(z_novelty = z(novelty),
-           z_transience = z(transience),
-           z_resonance = z(resonance))
-
-
-
-res_nov_model = lm(z_resonance ~ z_novelty, data = lda_output)
-lda_output$delta_R = lda_output$z_resonance - predict(res_nov_model)
-
-
-lda_output %>%
-    write_csv("data/csv/nov_tra_res_TEST.csv")
-
+doc2 %>%
+  split(.$.groups) %>%
+  walk(~(write_csv(., str_c("data/ntr/", unique(.$.groups), "_to.csv"))))
 ```
 
