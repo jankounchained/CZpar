@@ -7,25 +7,81 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
-p_load(tidyverse)
+p_load(tidyverse, tidytext)
 ```
 
 
-Load in tidy csvs
+# Load in merged psp records (pre-lemma)
 ```{r}
-psp2017_tidy <- read_csv("data/csv/psp_tidy.csv")
-psp2013_tidy <- read_csv("data/csv/psp2013_tidy.csv")
-psp2010_tidy <- read_csv("data/csv/psp2010_tidy.csv")
+fli <- read_csv("data/csv/full_lemma_in.csv")
 ```
 
 
-
-Assign parties to speakers
+# Match speaker with party
+List of MPs
 ```{r}
-unn_c <- read_csv("data/csv/unn.csv") %>%
+# load psp metadata
+poslanec <- read_delim("data/misc/poslanec.unl", 
+                       delim = "|", escape_double = T,
+                       col_names = c("id_poslanec", "id_osoba", "id_kraj", "id_kandidatka", 
+                                     "id_obdobi", "web", "ulice", "obec", "psc", "email", 
+                                     "telefon", "fax", "psp_telefon", "facebook", "foto"),
+                       locale = locale(encoding = 'windows-1250'))
+
+osoby <- read_delim("data/misc/osoby.unl", 
+                delim = "|", escape_double = T,
+                col_names = c("id_osoba", "pred", "prijmeni", "jmeno", "za",
+                              "narozeni", "pohlavi", "zmena", "umrti"),
+                locale = locale(encoding = 'windows-1250'))
+
+organy <- read_delim("data/misc/organy.unl", 
+                       delim = "|", escape_double = T,
+                       col_names = c("id_organ", "organ_id_organ", "id_typ_organu", 
+                                     "zkratka", "nazev_organu_cz", "nazev_organu_en", 
+                                     "od_organ", "do_organ", 
+                                     "priorita", "cl_organ_base"),
+                       locale = locale(encoding = 'windows-1250'))
+
+
+# only include psp2010, psp2013 and psp2017
+obdobi_of_interest <- c("170", "171", "172")
+
+# make a list of party affiliation
+mp_list <- poslanec %>%
+  filter(id_obdobi %in% obdobi_of_interest) %>%
+  left_join(osoby, by = "id_osoba") %>%
+  select(id_osoba, prijmeni, jmeno, id_kandidatka) %>%
+  left_join(organy, by = c("id_kandidatka" = "id_organ")) %>%
+  mutate(speaker_name = paste(jmeno, prijmeni, sep = " "),
+         speaker_name = str_remove_all(speaker_name, "[:punct:]")) %>%
+  select(speaker_name, zkratka) %>%
+  unique()
+```
+
+add party variable
+```{r}
+osoby_unn <- osoby %>%
+  mutate(speaker = paste(jmeno, prijmeni, sep = " ")) %>%
+  select(speaker) %>%
+  unnest_tokens(word_name, speaker, token = "words", to_lower = F)
+
+sp_stopwords <- enframe(unique(fli$speaker)) %>%
+  select(name = value) %>%
+  unnest_tokens(word_full, name, token = "words", to_lower = F) %>%
+  filter(!word_full %in% osoby_unn$word_name) %>%
+  unique() %>%
+  filter(!is.na(word_full))
+
+sp_name <- fli %>%
+  select(rowname, speaker) %>%
+  unnest_tokens(word, speaker, token = "words", to_lower = F) %>%
+  filter(!word %in% sp_stopwords$word_full) %>%
   group_by(rowname) %>%
-  summarise(text_c = str_c(word, collapse = " "))
+  summarise(speaker_name = str_c(word, collapse = " "))
 
-
+fli2 <- fli %>%
+  full_join(sp_name, by = "rowname") %>%
+  ungroup() %>%
+  full_join(mp_list, by = "speaker_name")
 ```
 
