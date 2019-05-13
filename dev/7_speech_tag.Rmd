@@ -10,8 +10,22 @@ library(pacman)
 p_load(tidyverse)
 ```
 
+
+Load in tidy csvs
+```{r}
+psp2017_tidy <- read_csv("data/csv/psp_tidy.csv")
+psp2013_tidy <- read_csv("data/csv/psp2013_tidy.csv")
+psp2010_tidy <- read_csv("data/csv/psp2010_tidy.csv")
+```
+
+
+
 Assign parties to speakers
 ```{r}
+unn_c <- read_csv("data/csv/unn.csv") %>%
+  group_by(rowname) %>%
+  summarise(text_c = str_c(word, collapse = " "))
+
 
 ```
 

@@ -13,46 +13,67 @@ options(future.globals.onReference = "warning")
 ```
 
 
-```{r split 2017}
-psp2017 <- read_csv("data/csv/psp_tidy.csv")
+```{r split 2010}
+psp2010 <- read_csv("data/csv/psp2010_tidy.csv") %>%
+  arrange(rowname)
 
-lemma17 = psp2017 %>%
-  arrange(doc) %>%
-  groupdata2::group(40)
-
-lemma17 %>%
-  select(rowname, text_c, .groups) %>%
-  split(.$.groups) %>%
-  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2017.csv"))))
+# lemma10 = psp2010 %>%
+#   arrange(doc) %>%
+#   groupdata2::group(40)
+# 
+# lemma10 %>%
+#   select(rowname, text_c, .groups) %>%
+#   split(.$.groups) %>%
+#   walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2010.csv"))))
 ```
 
 ```{r split 2013}
-psp2013 <- read_csv("data/csv/psp2013_tidy.csv")
+psp2013 <- read_csv("data/csv/psp2013_tidy.csv") %>%
+  arrange(rowname) %>%
+  mutate(rowname = rowname + max(psp2010$rowname))
 
-lemma13 = psp2013 %>%
-  arrange(doc) %>%
-  groupdata2::group(40)
-
-lemma13 %>%
-  select(rowname, text_c, .groups) %>%
-  split(.$.groups) %>%
-  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2013.csv"))))
+# lemma13 = psp2013 %>%
+#   arrange(doc) %>%
+#   groupdata2::group(40)
+# 
+# lemma13 %>%
+#   select(rowname, text_c, .groups) %>%
+#   split(.$.groups) %>%
+#   walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2013.csv"))))
 ```
 
-# 2010: unfinished
-```{r split 2010}
-psp2010 <- read_csv("data/csv/psp2010_tidy.csv") %>%
-  filter(!is.na(text_c))
+```{r split 2017}
+psp2017 <- read_csv("data/csv/psp_tidy.csv") %>%
+  arrange(rowname) %>%
+  mutate(rowname = rowname + max(psp2013$rowname))
 
-lemma10 = psp2010 %>%
-  arrange(doc) %>%
-  groupdata2::group(40)
+# lemma17 = psp2017 %>%
+#   arrange(doc) %>%
+#   groupdata2::group(40)
+# 
+# lemma17 %>%
+#   select(rowname, text_c, .groups) %>%
+#   split(.$.groups) %>%
+#   walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2017.csv"))))
+```
 
-lemma10 %>%
+```{r}
+nrow(psp2010) + nrow(psp2013) + nrow(psp2017)
+
+full_lemma_in <- psp2010 %>%
+  full_join(psp2013) %>%
+  full_join(psp2017)
+
+lemma = full_lemma_in %>%
+  groupdata2::group(120)
+
+lemma %>%
   select(rowname, text_c, .groups) %>%
   split(.$.groups) %>%
-  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_2010.csv"))))
+  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_psp.csv"))))
 ```
+
+
 
 
 # lemma function & load udpipe model
@@ -80,9 +101,21 @@ lemmatize <- function(filename) {
 ud_model <- udpipe_load_model("czech-pdt-ud-2.3-181115.udpipe")
 ```
 
+
+# new udpiping
+```{r}
+lfull <- list.files(path = "data/to_udpipe/", pattern = "psp", full.names = F)
+
+plan(multiprocess)
+future_lapply(lfull, lemmatize,
+              future.packages = c("tidyverse", "udpipe", "zoo"))
+```
+
+
+
 # parallel test
 ```{r}
-l2017 <- list.files(path = "data/to_udpipe/", pattern = "2017", full.names = F)[21:40]
+l2017 <- list.files(path = "data/to_udpipe/", pattern = "2017", full.names = F)
 
 plan(multiprocess)
 future_lapply(l2017, lemmatize,
