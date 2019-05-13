@@ -1,0 +1,81 @@
+---
+title: "lemma"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, udpipe, groupdata2, future.apply)
+
+options(future.globals.onReference = "warning")
+```
+
+
+```{r split 2010}
+psp2010 <- read_csv("data/csv/psp2010_tidy.csv") %>%
+  arrange(rowname)
+
+psp2013 <- read_csv("data/csv/psp2013_tidy.csv") %>%
+  arrange(rowname) %>%
+  mutate(rowname = rowname + max(psp2010$rowname))
+
+psp2017 <- read_csv("data/csv/psp_tidy.csv") %>%
+  arrange(rowname) %>%
+  mutate(rowname = rowname + max(psp2013$rowname))
+
+nrow(psp2010) + nrow(psp2013) + nrow(psp2017)
+
+full_lemma_in <- psp2010 %>%
+  full_join(psp2013) %>%
+  full_join(psp2017)
+
+write_csv(full_lemma_in, "data/csv/full_lemma_in.csv")
+
+lemma = full_lemma_in %>%
+  groupdata2::group(120)
+
+lemma %>%
+  select(rowname, text_c, .groups) %>%
+  split(.$.groups) %>%
+  walk(~(write_csv(., str_c("data/to_udpipe/", unique(.$.groups), "_psp.csv"))))
+```
+
+
+
+
+# lemma function & load udpipe model
+```{r lemmatize}
+lemmatize <- function(filename) {
+  
+  part <- read_csv(paste0("data/to_udpipe/", filename))
+  
+  ud_model <- udpipe_load_model("czech-pdt-ud-2.3-181115.udpipe")
+  x <- udpipe_annotate(ud_model, x = part$text_c, doc_id = part$rowname)
+  
+  x <- as_tibble(x) %>%
+    select(doc_id, token, lemma) 
+  
+  x <- x %>%
+    mutate(doc_id = as.numeric(doc_id)) %>%
+    filter(!is.na(lemma)) %>%
+    group_by(doc_id) %>%
+    summarise(text_c = str_c(lemma, collapse = " "))
+  
+  write_csv(x, path = paste0("data/from_udpipe/", filename))
+  
+}
+
+ud_model <- udpipe_load_model("czech-pdt-ud-2.3-181115.udpipe")
+```
+
+
+# new udpiping
+```{r}
+lfull <- list.files(path = "data/to_udpipe/", pattern = "psp", full.names = F)
+
+plan(multiprocess)
+future_lapply(lfull, lemmatize,
+              future.packages = c("tidyverse", "udpipe", "zoo"))
+```
