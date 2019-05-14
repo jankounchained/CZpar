@@ -85,10 +85,12 @@ calculate_ntr <- function(doc_subset_path, w) {
   
 }
 
-# DANGER ZONE
-# subset_paths <- list.files(path = "data/ntr/", pattern = "_to", full.names = T)
-# 
-# lapply(subset_paths, calculate_ntr, w = 5000)
+
+subset_paths <- list.files(path = "data/ntr/", pattern = "_to", full.names = T)[1]
+calculate_ntr(subset_paths, w = 5000)
+
+ 
+lapply(subset_paths, calculate_ntr, w = 5000)
 
 ```
 
