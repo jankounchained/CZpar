@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
-p_load(tidyverse, entropy, multidplyr, parallel)
+p_load(tidyverse, entropy, multidplyr, parallel, tictoc)
 ```
 
 
@@ -69,13 +69,15 @@ calculate_ntr <- function(doc_subset_path, w) {
   
   ntr_output = tibble(doc_id = dataenv$mat$doc_id) %>%
     mutate(
-      novelty = novelty2(w, cluster, dataenv),
-      transience = transience2(w, cluster, dataenv),
-      resonance = novelty - transience) %>%
+      novelty = novelty2(w, cluster, dataenv) #,
+      #transience = transience2(w, cluster, dataenv),
+      #resonance = novelty - transience
+      ) %>%
     filter(complete.cases(.)) %>%
-    mutate(z_novelty = z(novelty),
-           z_transience = z(transience),
-           z_resonance = z(resonance))
+    mutate(z_novelty = z(novelty) #,
+          # z_transience = z(transience),
+          # z_resonance = z(resonance)
+           )
   
   res_nov_model = lm(z_resonance ~ z_novelty, data = ntr_output)
   ntr_output$delta_R = ntr_output$z_resonance - predict(res_nov_model)
@@ -89,8 +91,9 @@ calculate_ntr <- function(doc_subset_path, w) {
 subset_paths <- list.files(path = "data/ntr/", pattern = "_to", full.names = T)[1]
 calculate_ntr(subset_paths, w = 5000)
 
- 
-lapply(subset_paths, calculate_ntr, w = 5000)
+tic()
+lapply(subset_paths, calculate_ntr, w = 1)
+toc()
 
 ```
 
