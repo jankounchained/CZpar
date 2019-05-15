@@ -1,34 +1,72 @@
+setwd("C:\USR\Downloads\split")
 sub_nr <- 1
 
-####
-# initialize
-####
+install.packages("pacman")
+library(pacman)
+p_load(tidyverse, entropy)
 
-cluster <- create_cluster(4) %>%
-  cluster_library("entropy")
+
+####
+# functions
+####
+vdiff <- function(x,n,fun) sapply(n, function(i) fun(x,i))
+vlag  <- function(x,n) vdiff(x,0:n,dplyr::lag)
+vlead <- function(x,n) vdiff(x,0:n,dplyr::lead)
+
+novelty <- function(mat, w) {
+  vlag(1:nrow(mat), w) %>%          # produce the lags (same shape as document)
+    apply(1, function(idx) {        # then for each row (document)
+      lapply(idx[2:length(idx)], function(i) { #for each lag
+        if (is.na(i)) return(NA)             #check if it's na (we're at beginning / end of data)
+        ## calculate surprise from past to present
+        KL.plugin(mat[i,], mat[idx[1],], unit = "log2")
+      }) %>%
+        unlist() %>%
+        mean()
+    })}
+
+
+transience <- function(mat, w) {
+  vlead(1:nrow(mat), w) %>%         # produce the leads (same shape as document)
+    apply(1, function(idx) {        # then for each row (document)
+      lapply(idx[2:length(idx)], function(i) { #for each lead
+        if (is.na(i)) return(NA)             #check if it's na (we're at beginning / end of data)
+        ## calculate surprise from present to future
+        KL.plugin(mat[idx[1],], mat[i,], unit = "log2")
+      }) %>%
+        unlist() %>%
+        mean()
+    })}
+
+
+z <- function(d) (d - mean(d)) / sd(d)
 
 calculate_ntr <- function(doc_subset_path, w) {
   
-  dataenv = new.env()
-  dataenv$mat = read_csv(doc_subset_path)
+  doc = read_csv(doc_subset_path) %>%
+    select(-doc_id, -.groups)
   
-  ntr_output = tibble(doc_id = dataenv$mat$doc_id) %>%
+  ntr_output = tibble(doc_id = .GlobalEnv$doc_id) %>%
     mutate(
-      novelty = novelty2(w, cluster, dataenv),
-      transience = transience2(w, cluster, dataenv),
-      resonance = novelty - transience) %>%
+      novelty = novelty(doc, w),
+      transience = transience(doc, w),
+      resonance = novelty - transience
+    ) %>%
     filter(complete.cases(.)) %>%
     mutate(z_novelty = z(novelty),
            z_transience = z(transience),
-           z_resonance = z(resonance))
+           z_resonance = z(resonance)
+    )
   
   res_nov_model = lm(z_resonance ~ z_novelty, data = ntr_output)
   ntr_output$delta_R = ntr_output$z_resonance - predict(res_nov_model)
   
   ntr_output %>%
-    write_csv(paste0(getwd(), str_extract(doc_subset_path, "\\d"), "_from.csv"))
+    write_csv(paste0("data/ntr/", str_extract(doc_subset_path, "\\d"), "_from.csv"))
   
 }
+
+
 
 ####
 # run
