@@ -1,9 +1,13 @@
-setwd("C:\USR\Downloads\split")
 sub_nr <- 1
 
 install.packages("pacman")
 library(pacman)
 p_load(tidyverse, entropy)
+
+
+wd_path <- "O:/ARTS_Cognitive-Science/2017-Cognitive Science/EM4"
+
+setwd(wd_path)
 
 
 ####
@@ -62,7 +66,7 @@ calculate_ntr <- function(doc_subset_path, w) {
   ntr_output$delta_R = ntr_output$z_resonance - predict(res_nov_model)
   
   ntr_output %>%
-    write_csv(paste0("data/ntr/", str_extract(doc_subset_path, "\\d"), "_from.csv"))
+    write_csv(paste0(wd_path, "/", str_extract(doc_subset_path, "\\d"), "_from.csv"))
   
 }
 
@@ -73,4 +77,4 @@ calculate_ntr <- function(doc_subset_path, w) {
 ####
 
 subset_paths <- list.files(path = ".", pattern = paste0(sub_nr ,"_to"), full.names = T)
-calculate_ntr(sub_path, w = 5000)
+calculate_ntr(sub_path, w = 27)
