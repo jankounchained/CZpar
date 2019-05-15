@@ -7,7 +7,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(pacman)
-p_load(tidyverse, entropy, multidplyr, parallel, tictoc)
+p_load(tidyverse, entropy, tictoc)
+
+doc_id = read_lines("models/doc_id") %>%
+  head(1000)
 ```
 
 
@@ -17,66 +20,53 @@ vdiff <- function(x,n,fun) sapply(n, function(i) fun(x,i))
 vlag  <- function(x,n) vdiff(x,0:n,dplyr::lag)
 vlead <- function(x,n) vdiff(x,0:n,dplyr::lead)
 
-novelty2 <- function(w, cl, env) {
-    # produce the lags (same shape as document)
-    vlag(1:nrow(env$mat), w) %>%          
-        parApply(cl = cl, X = ., MARGIN = 1,
-                 function(idx, env) {
-                     # then for each row (document)
-                     #print(env)
-                     mean(unlist(lapply(idx[2:length(idx)], function(i) {
-                         #for each lag
-                         #check if it's na (we're at beginning / end of data)
-                         if (is.na(i)) return(NA)             
-                         ## calculate surprise from past to present
-                         KL.plugin(env$mat[i,], env$mat[idx[1],], unit = "log2")
-                         
-                     })))}, env = env)}
+novelty <- function(mat, w) {
+    vlag(1:nrow(mat), w) %>%          # produce the lags (same shape as document)
+        apply(1, function(idx) {        # then for each row (document)
+            lapply(idx[2:length(idx)], function(i) { #for each lag
+                if (is.na(i)) return(NA)             #check if it's na (we're at beginning / end of data)
+                ## calculate surprise from past to present
+                KL.plugin(mat[i,], mat[idx[1],], unit = "log2")
+            }) %>%
+                unlist() %>%
+                mean()
+        })}
 
 
-transience2 <- function(w, cl, env) {
-    # produce the lags (same shape as document)
-    vlag(1:nrow(env$mat), w) %>%          
-        parApply(cl = cl, X = ., MARGIN = 1,
-                 function(idx, env) {
-                     # then for each row (document)
-                     #print(env)
-                     mean(unlist(lapply(idx[2:length(idx)], function(i) {
-                         #for each lag
-                         #check if it's na (we're at beginning / end of data)
-                         if (is.na(i)) return(NA)             
-                         ## calculate surprise from present to future
-                         KL.plugin(env$mat[idx[1],], env$mat[i,], unit = "log2")
-                         
-                     })))}, env = env)}
+transience <- function(mat, w) {
+    vlead(1:nrow(mat), w) %>%         # produce the leads (same shape as document)
+        apply(1, function(idx) {        # then for each row (document)
+            lapply(idx[2:length(idx)], function(i) { #for each lead
+                if (is.na(i)) return(NA)             #check if it's na (we're at beginning / end of data)
+                ## calculate surprise from present to future
+                KL.plugin(mat[idx[1],], mat[i,], unit = "log2")
+            }) %>%
+                unlist() %>%
+                mean()
+        })}
 
 
 z <- function(d) (d - mean(d)) / sd(d)
 ```
 
-# new env and cluster
-```{r}
-cluster <- create_cluster(4) %>%
-    cluster_library("entropy")
-```
 
 novelty-transience-resonance function
 ```{r}
 calculate_ntr <- function(doc_subset_path, w) {
   
-  dataenv = new.env()
-  dataenv$mat = read_csv(doc_subset_path)
+  doc = read_csv(doc_subset_path) %>%
+    select(-doc_id, -.groups)
   
-  ntr_output = tibble(doc_id = dataenv$mat$doc_id) %>%
+  ntr_output = tibble(doc_id = .GlobalEnv$doc_id) %>%
     mutate(
-      novelty = novelty2(w, cluster, dataenv) #,
-      #transience = transience2(w, cluster, dataenv),
-      #resonance = novelty - transience
+      novelty = novelty(doc, w),
+      transience = transience(doc, w),
+      resonance = novelty - transience
       ) %>%
     filter(complete.cases(.)) %>%
-    mutate(z_novelty = z(novelty) #,
-          # z_transience = z(transience),
-          # z_resonance = z(resonance)
+    mutate(z_novelty = z(novelty),
+           z_transience = z(transience),
+           z_resonance = z(resonance)
            )
   
   res_nov_model = lm(z_resonance ~ z_novelty, data = ntr_output)
@@ -86,14 +76,19 @@ calculate_ntr <- function(doc_subset_path, w) {
     write_csv(paste0("data/ntr/", str_extract(doc_subset_path, "\\d"), "_from.csv"))
   
 }
+```
 
-
-subset_paths <- list.files(path = "data/ntr/", pattern = "_to", full.names = T)[1]
-calculate_ntr(subset_paths, w = 5000)
+test run
+```{r}
+test_path <- "data/ntr/test.csv"
 
 tic()
-lapply(subset_paths, calculate_ntr, w = 1)
+calculate_ntr(test_path, w = 1)
 toc()
 
+# subset_paths <- list.files(path = "data/ntr/", pattern = "_to", full.names = T)
+# tic()
+# lapply(subset_paths, calculate_ntr, w = 1)
+# toc()
 ```
 
