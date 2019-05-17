@@ -13,13 +13,18 @@ p_load(tidyverse, tidytext)
 
 # Load in merged psp records (pre-lemma)
 ```{r}
-fli <- read_csv("data/csv/full_lemma_in.csv")
+fli <- read_csv("data/csv/full_lemma_in.csv") %>%
+  # create an id for election periods for later merging
+  # in case someone switches party
+  mutate(id_obdobi = case_when(str_detect(doc, "2010ps") ~ 170,
+                               str_detect(doc, "PS 2013") ~ 171,
+                               str_detect(doc, "PS 2017") ~ 172))
 ```
 
 
 # Match speaker with party
 List of MPs
-```{r}
+```{r list of MPs and partisanship}
 # load psp metadata
 poslanec <- read_delim("data/misc/poslanec.unl", 
                        delim = "|", escape_double = T,
@@ -50,21 +55,23 @@ obdobi_of_interest <- c("170", "171", "172")
 mp_list <- poslanec %>%
   filter(id_obdobi %in% obdobi_of_interest) %>%
   left_join(osoby, by = "id_osoba") %>%
-  select(id_osoba, prijmeni, jmeno, id_kandidatka) %>%
+  select(id_osoba, prijmeni, jmeno, id_kandidatka, id_obdobi) %>%
   left_join(organy, by = c("id_kandidatka" = "id_organ")) %>%
   mutate(speaker_name = paste(jmeno, prijmeni, sep = " "),
          speaker_name = str_remove_all(speaker_name, "[:punct:]")) %>%
-  select(speaker_name, zkratka) %>%
+  select(speaker_name, zkratka, id_obdobi) %>%
   unique()
 ```
 
-add party variable
-```{r}
+
+```{r stop names}
+### tokenized names
 osoby_unn <- osoby %>%
   mutate(speaker = paste(jmeno, prijmeni, sep = " ")) %>%
   select(speaker) %>%
   unnest_tokens(word_name, speaker, token = "words", to_lower = F)
 
+### extract subset of titles to be used as stopwords
 sp_stopwords <- enframe(unique(fli$speaker)) %>%
   select(name = value) %>%
   unnest_tokens(word_full, name, token = "words", to_lower = F) %>%
@@ -72,16 +79,24 @@ sp_stopwords <- enframe(unique(fli$speaker)) %>%
   unique() %>%
   filter(!is.na(word_full))
 
+### remove stopwords from transcripts
 sp_name <- fli %>%
   select(rowname, speaker) %>%
   unnest_tokens(word, speaker, token = "words", to_lower = F) %>%
   filter(!word %in% sp_stopwords$word_full) %>%
   group_by(rowname) %>%
   summarise(speaker_name = str_c(word, collapse = " "))
+```
 
+```{r merge}
+# make the final merge
 fli2 <- fli %>%
+  # replace speaker name by clean speaker name
   full_join(sp_name, by = "rowname") %>%
   ungroup() %>%
-  full_join(mp_list, by = "speaker_name")
+  # add partisanship
+  full_join(mp_list, by = c("speaker_name", "id_obdobi"))
+
+write_csv(fli2, "data/csv/full_ref.csv")
 ```
 

@@ -75,4 +75,11 @@ per_speaker %>%
     knitr::kable()
 
 
+comparison %>%
+  summarise(mean = mean(nchar(text)))
+
+
+round(stat.desc(nchar(comparison$text)), 2)
+rethinking::dens(nchar(comparison$text))
+
 ```
