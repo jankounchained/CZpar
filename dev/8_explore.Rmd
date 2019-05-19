@@ -89,15 +89,91 @@ topic_words <- map_df(col, extract_topic_words)
 
 ```{r funky topic plots}
 topic_words %>%
-  filter(topic == "37") %>%
+  filter(topic == "91") %>%
+  ggplot(aes(label = word, size = prob / 2, color = factor(word))) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 20) +
+  theme_minimal()
+```
+
+
+27: administrative
+40: regional administration
+47: vysetrovani capaku
+52: education and transportation
+56: dostavba dukovan
+70: dry season / climate change
+84: appologies from non present MPs
+91: budget
+92: refugees
+97: pauses
+99: welfare state
+
+
+# topic examples
+```{r}
+set.seed(420)
+
+# capi hnizdo
+topic_words %>%
+  filter(topic == "47") %>%
   ggplot(aes(label = word, size = prob / 2, color = factor(word))) +
   geom_text_wordcloud() +
   scale_size_area(max_size = 20) +
   theme_minimal()
 
+topic47 <- topic_words %>%
+  filter(topic == "47") %>%
+  mutate(word_en = c("dossier", "agrofert", "nest", "investigator", "stork", "nominee", "stork around", "spa", "come out", "occupy"))
+
+topic47 %>%
+  ggplot(aes(label = word_en, size = prob / 2, color = factor(word))) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 20) +
+  theme_minimal()
+  
+```
+
+# lesy, klima, voda
+```{r}
+set.seed(420)
+
 topic_words %>%
-  filter(topic == "64") %>%
+  filter(topic == "70") %>%
   ggplot(aes(label = word, size = prob / 2, color = factor(word))) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 20) +
+  theme_minimal()
+
+topic70 <- topic_words %>%
+  filter(topic == "70") %>%
+  mutate(word_en = c("need", "react", "introduce", "water", "forest", "present", "forestry", "optionally", "definition", "leak"))
+
+topic70 %>%
+  ggplot(aes(label = word_en, size = prob / 2, color = factor(word))) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 20) +
+  theme_minimal()
+```
+
+
+# pauzy
+```{r}
+set.seed(420)
+
+topic_words %>%
+  filter(topic == "97") %>%
+  ggplot(aes(label = word, size = prob / 2, color = factor(word))) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 20) +
+  theme_minimal()
+
+topic97 <- topic_words %>%
+  filter(topic == "97") %>%
+  mutate(word_en = c("hour", "need", "minute", "a.k.a.", "pause", "meet", "punctual", "length", "technology", "declare"))
+
+topic97 %>%
+  ggplot(aes(label = word_en, size = prob / 2, color = factor(word))) +
   geom_text_wordcloud() +
   scale_size_area(max_size = 20) +
   theme_minimal()
