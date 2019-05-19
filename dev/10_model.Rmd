@@ -1,0 +1,40 @@
+---
+title: "10_model"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, brms, ggunchained, rethinking, lmerTest, rstan)
+```
+
+```{r}
+comparison <- read_csv("data/csv/comparison.csv") 
+```
+
+
+```{r lmer}
+fr_rn_model <- lmer(z_resonance ~ z_novelty + (1 | speaker_name) + (1 | zkratka), data = comparison)
+summary(fr_rn_model)
+
+fr_pary_model <- lmer(z_resonance ~ z_novelty + zkratka + (1 | speaker_name), data = comparison)
+summary(fr_pary_model)
+```
+
+```{r bayesian}
+rn <- bf("z_resonance ~ z_novelty")
+
+rn_model <- brm(rn, 
+                prior = c(
+                      prior(normal(0, 1), class = "Intercept"),
+                      prior(normal(0, 1), class = "b"),
+                      prior(normal(0, 1), class = "sigma")),
+                data = comparison,
+                cores = 4, iter = 4000, warmup = 1000,
+                file = "models/rn_model.Rds")
+
+rn_model
+```
+
