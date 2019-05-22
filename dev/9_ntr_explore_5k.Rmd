@@ -31,23 +31,26 @@ comp5k <- map_df(ntr, read_csv_and_assign) %>%
   arrange(rowname) %>%
   left_join(full, by = "rowname")
 
+comp5k <- read_csv("data/csv/comp5k.csv")
+
 ```
 
 # OVERALL PATTERNS
 ```{r ploting}
 # NOVELTY VS RESONANCE
-ggplot(comp5k, aes(novelty, resonance)) +
+ggplot(comp5k, aes(z_novelty, z_resonance)) +
     geom_bin2d(bins = 100) +
     scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000),
                          labels = trans_format("log10", 
                                                math_format(expr = 10^.x, format = force))) +
     geom_smooth(method = "lm", colour = "black", alpha = 0, size = 0.5) +
-    labs(x = "Novelty\n", y = "Resonance", 
-         title = "Resonance vs. Novelty",
-         subtitle = "with regression line, w = 5000",
-         caption = "Data source: speeches in Czech Chamber of Deputies (2010-2019)") +
-  scale_x_continuous(breaks = seq(0, 5, 1)) +
-  scale_y_continuous(breaks = seq(-3, 3, 1)) +
+    labs(x = "Novelty (z-scaled)\n", y = "Resonance (z-scaled)", 
+         title = "Resonance vs. Novelty in the long-term",
+         subtitle = "with a regression line, w = 5000",
+         caption = "Data source: speeches in Czech Chamber of Deputies (2010-2019)",
+         fill = "speech\ncount") +
+  scale_x_continuous(breaks = seq(-3, 9, 2)) +
+  scale_y_continuous(breaks = seq(-6, 6, 2)) +
   theme_janco_point() +
   theme(legend.direction = "vertical", legend.position = "right",
         plot.caption = element_text(hjust = 0.5)
@@ -55,17 +58,18 @@ ggplot(comp5k, aes(novelty, resonance)) +
 
 
 # NOVELTY VS TRANSIENCE
-ggplot(comp5k, aes(novelty, transience)) +
+ggplot(comp5k, aes(z_novelty, z_transience)) +
     geom_bin2d(bins = 100) +
     scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000,10000),
                          labels = trans_format("log10", math_format(expr = 10^.x, format = force))) +
     geom_abline(colour = "black", linetype = "dashed") +
-    labs(x = "Novelty\n", y = "Transience", 
-         title = "Novelty vs. Transience",
-         subtitle = "with identity line (x = y), w = 27",
-         caption = "Data source: speeches in Czech Chamber of Deputies (2010-2019)") +
-  scale_x_continuous(breaks = seq(0, 6, 1)) +
-  scale_y_continuous(breaks = seq(0, 6, 1)) +
+    labs(x = "Novelty (z-scaled)\n", y = "Transience (z-scaled)", 
+         title = "Novelty vs. Transience in the long-term",
+         subtitle = "with an identity line (x = y), w = 5000",
+         caption = "Data source: speeches in Czech Chamber of Deputies (2010-2019)",
+         fill = "speech\ncount") +
+  scale_x_continuous(breaks = seq(-3, 9, 2)) +
+  scale_y_continuous(breaks = seq(-3, 9, 2)) +
   theme_janco_point() +
   theme(legend.direction = "vertical", legend.position = "right",
         plot.caption = element_text(hjust = 0.5)
@@ -98,6 +102,7 @@ names(party_colors) = unique(pc$zkratka)
 ```
 
 ```{r party plots}
+# BY PARTY SMOOTH
 # by party nov-res line
 pc %>%
   filter(group == 3) %>%
@@ -114,24 +119,66 @@ pc %>%
   theme_janco_point()
 
 
-# by party nov-res density
+# BY PARTY BINS
+# last psp2010
 pc %>%
   filter(group == 3) %>%
-  ggplot(aes(novelty, resonance)) +
-  geom_bin2d(bins = 100) +
-  scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000,10000),
-                         labels = trans_format("log10", math_format(expr = 10^.x, format = force))) +
-  geom_smooth(method = "lm", colour = "black", size = 0.5) +
-  facet_wrap(~zkratka) +
-  theme_janco_point()
-
-pc %>%
-  #filter(group == 8) %>%
   ggplot(aes(z_novelty, z_resonance)) +
   geom_bin2d(bins = 100) +
   scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000,10000),
                          labels = trans_format("log10", math_format(expr = 10^.x, format = force))) +
   geom_smooth(method = "lm", colour = "black", size = 0.5) +
+  facet_wrap(~zkratka) +
+  theme_janco_point() +
+  labs(x = "Novelty (z-scaled)\n", y = "Resonance (z-scaled)", 
+       title = "Resonance vs. Novelty by party: 2012/13",
+       subtitle = "w = 5000",
+       caption = "Data source: speeches in Czech Chamber of Deputies (2012-2013)",
+       fill = "speech count \n")
+
+# first psp2013
+pc %>%
+  filter(group == 4) %>%
+  ggplot(aes(z_novelty, z_resonance)) +
+  geom_bin2d(bins = 100) +
+  scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000,10000),
+                         labels = trans_format("log10", math_format(expr = 10^.x, format = force))) +
+  geom_smooth(method = "lm", colour = "black", size = 0.5) +
+  facet_wrap(~zkratka) +
+  theme_janco_point() +
+    labs(x = "Novelty (z-scaled)\n", y = "Resonance (z-scaled)", 
+       title = "Resonance vs. Novelty by party: 2013/14",
+       subtitle = "w = 5000",
+       caption = "Data source: speeches in Czech Chamber of Deputies (2013-2014)",
+       fill = "speech count \n")
+
+# first psp2017
+pc %>%
+  filter(group == 7) %>%
+  ggplot(aes(z_novelty, z_resonance)) +
+  geom_bin2d(bins = 100) +
+  scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000,10000),
+                         labels = trans_format("log10", math_format(expr = 10^.x, format = force))) +
+  geom_smooth(method = "lm", colour = "black", size = 0.5) +
+  facet_wrap(~zkratka) +
+  theme_janco_point() +
+  labs(x = "Novelty (z-scaled)\n", y = "Resonance (z-scaled)", 
+       title = "Resonance vs. Novelty by party: 2017/18",
+       subtitle = "w = 5000",
+       caption = "Data source: speeches in Czech Chamber of Deputies (2017-2018)",
+       fill = "speech count \n")
+  
+
+
+# overall by party nov-res density
+pc %>%
+  ggplot(aes(z_novelty, z_resonance)) +
+  geom_bin2d(bins = 100) +
+  scale_fill_viridis_c(trans = "log", breaks = c(1,10,100,1000,10000),
+                         labels = trans_format("log10", math_format(expr = 10^.x, format = force))) +
+  geom_smooth(method = "lm", colour = "black", size = 0.5) +
+  scale_x_continuous(breaks = seq(-3, 6, 3)) +
+  scale_y_continuous(breaks = seq(-6, 6, 3)) +
   facet_wrap(~zkratka) +
   theme_janco_point()
 
@@ -143,6 +190,43 @@ pc %>%
   geom_split_violin() +
   theme_janco_bar()
 
+```
+
+ANO's novelty over time
+```{r ano vs cssd}
+ano <- pc %>%
+  filter(zkratka == "ANO2011" | zkratka == "CSSD") %>%
+  filter(group != 1 & group != 2 & group != 3)
+
+ano %>%
+  ggplot() +
+  geom_jitter(aes(factor(group), z_novelty, color = zkratka), alpha = 0.01, position = position_jitterdodge()) +
+  geom_split_violin(aes(factor(group), z_novelty, fill = zkratka, alpha = 0.8)) +
+  scale_x_discrete(labels = c("2013/14", "2014/15", "2015/16", "2017/18", "2018/19")) +
+  scale_color_manual(values = party_colors, aesthetics = c("fill", "color")) +
+  theme_janco_bar() +
+  guides(alpha = F) +
+  labs(title = "Novelty over time",
+       subtitle = "Comparing Andrej Babis' newcomer party and the Social Democrats, w = 5000",
+       y = "novelty (z-scaled)",
+       x = "timeframe",
+       color = "party",
+       fill = "party")
+
+ano %>%
+  ggplot() +
+  geom_jitter(aes(factor(group), z_resonance, color = zkratka), alpha = 0.01, position = position_jitterdodge()) +
+  geom_split_violin(aes(factor(group), z_resonance, fill = zkratka, alpha = 0.8)) +
+  scale_x_discrete(labels = c("2013/14", "2014/15", "2015/16", "2017/18", "2018/19")) +
+  scale_color_manual(values = party_colors, aesthetics = c("fill", "color")) +
+  theme_janco_bar() +
+  guides(alpha = F) +
+  labs(title = "Resonance over time",
+       subtitle = "Comparing Andrej Babis' newcomer party and the Social Democrats, w = 5000",
+       y = "resonance (z-scaled)",
+       x = "timeframe",
+       color = "party",
+       fill = "party")
 ```
 
 

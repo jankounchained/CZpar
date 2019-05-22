@@ -12,9 +12,11 @@ p_load(tidyverse, brms, ggunchained, rethinking, lmerTest, rstan)
 
 ```{r}
 comparison <- read_csv("data/csv/comparison.csv") 
+comp5k <- read_csv("data/csv/comp5k.csv")
 ```
 
-
+# FREQUENTIST
+overall resonance ~ novelty (frequentist)
 ```{r lmer}
 fr_rn_model <- lmer(z_resonance ~ z_novelty + (1 | speaker_name) + (1 | zkratka), data = comparison)
 summary(fr_rn_model)
@@ -23,18 +25,189 @@ fr_pary_model <- lmer(z_resonance ~ z_novelty + zkratka + (1 | speaker_name), da
 summary(fr_pary_model)
 ```
 
-```{r bayesian}
+resonance, novelty, party
+```{r}
+fr_r <- lmer(z_resonance ~ z_novelty + (1 + z_novelty | zkratka), data = comp5k)
+summary(fr_r)
+```
+
+
+# BAYESIAN
+overall resonance ~ novelty (bayesian)
+```{r bayesian RN}
 rn <- bf("z_resonance ~ z_novelty")
 
 rn_model <- brm(rn, 
                 prior = c(
                       prior(normal(0, 1), class = "Intercept"),
-                      prior(normal(0, 1), class = "b"),
-                      prior(normal(0, 1), class = "sigma")),
-                data = comparison,
+                      prior(normal(0, 3), class = "b"),
+                      prior(normal(0, 3), class = "sigma")),
+                data = comp5k,
                 cores = 4, iter = 4000, warmup = 1000,
-                file = "models/rn_model.Rds")
+                file = "models/rn_model_5k.Rds")
 
 rn_model
+```
+
+overall transience ~ novelty (bayesian)
+```{r bayesian TN}
+tn <- bf("z_transience ~ z_novelty")
+
+tn_model <- brm(tn, 
+                prior = c(
+                      prior(normal(0, 1), class = "Intercept"),
+                      prior(normal(0, 3), class = "b"),
+                      prior(normal(0, 3), class = "sigma")),
+                data = comp5k,
+                cores = 2, iter = 4000, warmup = 1000,
+                file = "models/tn_model_5k.Rds")
+
+tn_model
+```
+
+by party novelty X resonance
+```{r}
+npar <- bf("z_novelty ~ zkratka + (1 | speaker_name)")
+
+npar_model <- brm(npar, 
+                prior = c(
+                      prior(normal(0, 1), class = "Intercept"),
+                      prior(normal(0, 3), class = "b"),
+                      prior(normal(0, 3), class = "sd"),
+                      prior(normal(0, 3), class = "sigma")),
+                data = comp5k,
+                cores = 2, chains = 1, 
+                iter = 2000, warmup = 1000,
+                file = "models/npar_model_5k.Rds")
+
+npar_model
+```
+
+Babis vs ODS and CSSD
+```{r}
+ano_vs_trad <- comp5k %>%
+  mutate(zkratka = ifelse(is.na(zkratka), "Guest Speakers", zkratka)) %>%
+  mutate(ano_vs = case_when(zkratka == "ANO2011" ~ 1,
+                           zkratka == "CSSD" ~ 0,
+                           zkratka == "KDU-ČSL" ~ 2,
+                           zkratka == "KSCM" ~ 2,
+                           zkratka == "ODS" ~ 0,
+                           zkratka == "TOP09" ~ 2,
+                           zkratka == "STAN" ~ 2,
+                           zkratka == "Piráti" ~ 2,
+                           zkratka == "Usvit" | zkratka == "SPD" ~ 2,
+                           zkratka == "VV" ~ 2,
+                           zkratka == "Guest Speakers" ~ 2)) %>%
+  filter(ano_vs != 2) %>%
+  filter(group == 4)
+
+ano_vs_trad2 <- comp5k %>%
+  mutate(zkratka = ifelse(is.na(zkratka), "Guest Speakers", zkratka)) %>%
+  mutate(ano_vs = case_when(zkratka == "ANO2011" ~ 1,
+                           zkratka == "CSSD" ~ 0,
+                           zkratka == "KDU-ČSL" ~ 2,
+                           zkratka == "KSCM" ~ 2,
+                           zkratka == "ODS" ~ 0,
+                           zkratka == "TOP09" ~ 2,
+                           zkratka == "STAN" ~ 2,
+                           zkratka == "Piráti" ~ 2,
+                           zkratka == "Usvit" | zkratka == "SPD" ~ 2,
+                           zkratka == "VV" ~ 2,
+                           zkratka == "Guest Speakers" ~ 2)) %>%
+  filter(ano_vs != 2) %>%
+  filter(group == 7)
+
+ano <- bf("z_novelty ~ ano_vs + (1 | zkratka)")
+
+ano_model <- brm(ano, 
+                prior = c(
+                      prior(normal(0, 1), class = "Intercept"),
+                      prior(normal(0, 2), class = "b"),
+                      prior(normal(0, 2), class = "sd"),
+                      prior(normal(0, 2), class = "sigma")),
+                data = ano_vs_trad,
+                cores = 2, chains = 4, 
+                iter = 2000, warmup = 1000,
+                file = "models/ano_model_5k")
+
+ano_model
+
+
+ano_model2 <- brm(ano, 
+                prior = c(
+                      prior(normal(0, 1), class = "Intercept"),
+                      prior(normal(0, 2), class = "b"),
+                      prior(normal(0, 2), class = "sd"),
+                      prior(normal(0, 2), class = "sigma")),
+                data = ano_vs_trad2,
+                cores = 2, chains = 4, 
+                iter = 4000, warmup = 1000,
+                file = "models/ano_model2_5k")
+
+ano_model2
+```
+
+
+
+### GARBAGE ###
+Babis novelty
+```{r ano over time}
+ano <- comp5k %>%
+  filter(zkratka == "ANO2011")
+
+n_party_model <- lmer(z_novelty ~ group + (1 | speaker_name) + (1 | bod), data = ano)
+
+```
+
+```{r ano vs traditional parties}
+ano_vs_trad <- comp5k %>%
+  mutate(zkratka = ifelse(is.na(zkratka), "Guest Speakers", zkratka)) %>%
+  mutate(ano_vs = case_when(zkratka == "ANO2011" ~ 1,
+                           zkratka == "CSSD" ~ 0,
+                           zkratka == "KDU-ČSL" ~ 0,
+                           zkratka == "KSCM" ~ 0,
+                           zkratka == "ODS" ~ 0,
+                           zkratka == "TOP09" ~ 0,
+                           zkratka == "STAN" ~ 0,
+                           zkratka == "Piráti" ~ 2,
+                           zkratka == "Usvit" | zkratka == "SPD" ~ 2,
+                           zkratka == "VV" ~ 2,
+                           zkratka == "Guest Speakers" ~ 2)) %>%
+  filter(ano_vs != 2)
+
+
+n_vs_model <- lmer(z_novelty ~ ano_vs + (1 | speaker_name) + (1 | zkratka), data = ano_vs_trad)
+summary(n_vs_model)
+```
+
+```{r ano_vs plot}
+ano_vs_trad %>%
+  ggplot(aes(factor(group), z_resonance, fill = factor(ano_vs))) +
+  geom_split_violin()
+
+d.pred <- distinct(ano_vs_trad, ano_vs)
+a <- fitted(n_vs_model, 
+             re_formula = NA, 
+             newdata = d.pred, 
+             allow.new.levels = FALSE)
+```
+
+```{r ano vs cssd}
+n_cssd_model <- lmer(z_novelty ~ zkratka + (1 | speaker_name) + (1 | bod), data = ano)
+summary(n_cssd_model)
+
+
+n_cssd_bd <- bf("z_novelty ~ zkratka")
+
+n_cssd_brm <- brm(n_cssd_bd, 
+                prior = c(
+                      prior(normal(0, 1), class = "Intercept"),
+                      prior(normal(0, 1), class = "b"),
+                      prior(normal(0, 1), class = "sigma")),
+                data = ano,
+                cores = 4, iter = 4000, warmup = 1000,
+                file = "models/n_cssd_brm.Rds")
+
+n_cssd_brm
 ```
 
