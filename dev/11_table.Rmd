@@ -1,0 +1,95 @@
+---
+title: "11_tables"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pacman)
+p_load(tidyverse, brms, ggunchained, rethinking, lmerTest, rstan)
+```
+
+```{r}
+comparison <- read_csv("data/csv/comparison.csv") %>%
+  filter(group == 4) %>%
+  filter(!is.na(zkratka))
+
+comp5k <- read_csv("data/csv/comp5k.csv") %>%
+  filter(group == 4) %>%
+  filter(!is.na(zkratka))
+```
+
+SHORT TERM
+# resonance ~ fitted(resonance ~ novelty)
+```{r}
+fitRN <- lmer(z_resonance ~ z_novelty + (1 | speaker_name) + (1 | zkratka), data = comparison)
+summary(fitRN)
+
+a <- comparison %>%
+  mutate(fitRN = fitted(fitRN))
+  
+
+obs <- lmer(z_resonance ~ fitRN + (1 | speaker_name) + (1 | zkratka), data = a)
+summary(obs)
+
+a2 <- a %>%
+  mutate(obs = fitted(obs))
+```
+
+# HPDI accross party
+```{r}
+delta_speaker <- a2 %>%
+  group_by(speaker_name) %>%
+  summarise(novelty = mean(z_novelty), 
+            resonance = mean(z_resonance),
+            delta = mean(obs))
+
+delta_party_hpdi <- a2 %>%
+  group_by(zkratka) %>%
+  summarise(novelty_lo = HPDI(z_novelty)[1], 
+            novelty_hi = HPDI(z_novelty)[2], 
+            resonance_lo = HPDI(z_resonance)[1], 
+            resonance_hi = HPDI(z_resonance)[2],
+            delta_hi = HPDI(obs)[1],
+            delta_lo = HPDI(obs)[2])
+
+```
+
+
+LONG TERM
+# resonance ~ fitted(resonance ~ novelty)
+```{r}
+fitRN_5k <- lmer(z_resonance ~ z_novelty + (1 | speaker_name) + (1 | zkratka), data = comp5k)
+summary(fitRN_5k)
+
+b <- comp5k %>%
+  mutate(fitRN = fitted(fitRN_5k))
+  
+
+obs_5k <- lmer(z_resonance ~ fitRN + (1 | speaker_name) + (1 | zkratka), data = b)
+summary(obs_5k)
+
+b2 <- b %>%
+  mutate(obs = fitted(obs_5k))
+```
+
+# HPDI accross party
+```{r}
+delta_speaker_5k <- b2 %>%
+  group_by(speaker_name) %>%
+  summarise(novelty = mean(z_novelty), 
+            resonance = mean(z_resonance),
+            delta = mean(obs))
+
+delta_party_hpdi_5k <- b2 %>%
+  group_by(zkratka) %>%
+  summarise(novelty_lo = HPDI(z_novelty)[1], 
+            novelty_hi = HPDI(z_novelty)[2], 
+            resonance_lo = HPDI(z_resonance)[1], 
+            resonance_hi = HPDI(z_resonance)[2],
+            delta_hi = HPDI(obs)[1],
+            delta_lo = HPDI(obs)[2])
+
+```
+
